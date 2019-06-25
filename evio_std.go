@@ -7,6 +7,7 @@ package evio
 import (
 	"errors"
 	"io"
+	"math"
 	"net"
 	"runtime"
 	"sync"
@@ -383,7 +384,13 @@ func stdloopRead(s *stdserver, l *stdloop, c *stdconn, in []byte) error {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
 			}
+			start := time.Now()
 			c.conn.Write(out)
+			end := time.Now()
+			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
+			if s.events.WriteFinish != nil {
+				s.events.WriteFinish(duration)
+			}
 		}
 		switch action {
 		case Shutdown:
