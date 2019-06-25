@@ -332,13 +332,7 @@ func loopUDPRead(s *server, l *loop, lnidx, fd int) error {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
 			}
-			start := time.Now()
 			syscall.Sendto(fd, out, 0, sa)
-			end := time.Now()
-			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
-			if s.events.WriteFinish != nil {
-				s.events.WriteFinish(duration)
-			}
 		}
 		switch action {
 		case Shutdown:
@@ -376,7 +370,15 @@ func loopWrite(s *server, l *loop, c *conn) error {
 	if s.events.PreWrite != nil {
 		s.events.PreWrite()
 	}
+
+	start := time.Now()
 	n, err := syscall.Write(c.fd, c.out)
+	end := time.Now()
+	duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
+	if s.events.WriteFinish != nil {
+		s.events.WriteFinish(duration)
+	}
+
 	if err != nil {
 		if err == syscall.EAGAIN {
 			return nil
