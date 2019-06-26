@@ -116,7 +116,7 @@ type Events struct {
 	// PreWrite fires just before any data is written to any client socket.
 	PreWrite func()
 	// WriteFinish fires where socket write finish.
-	WriteFinish func(time float64)
+	WriteFinish func(ext interface{}, time float64)
 	// Data fires when a connection sends the server data.
 	// The in parameter is the incoming data.
 	// Use the out return value to write data to the connection.
