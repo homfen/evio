@@ -379,7 +379,7 @@ func stdloopRead(s *stdserver, l *stdloop, c *stdconn, in []byte) error {
 		return nil
 	}
 	if s.events.Data != nil {
-		out, action := s.events.Data(c, in)
+		out, action, ext := s.events.Data(c, in)
 		if len(out) > 0 {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
@@ -389,7 +389,7 @@ func stdloopRead(s *stdserver, l *stdloop, c *stdconn, in []byte) error {
 			end := time.Now()
 			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
 			if s.events.WriteFinish != nil {
-				s.events.WriteFinish(duration)
+				s.events.WriteFinish(ext, duration)
 			}
 		}
 		switch action {
@@ -406,7 +406,7 @@ func stdloopRead(s *stdserver, l *stdloop, c *stdconn, in []byte) error {
 
 func stdloopReadUDP(s *stdserver, l *stdloop, c *stdudpconn) error {
 	if s.events.Data != nil {
-		out, action := s.events.Data(c, c.in)
+		out, action, ext := s.events.Data(c, c.in)
 		if len(out) > 0 {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
@@ -416,7 +416,7 @@ func stdloopReadUDP(s *stdserver, l *stdloop, c *stdudpconn) error {
 			end := time.Now()
 			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
 			if s.events.WriteFinish != nil {
-				s.events.WriteFinish(duration)
+				s.events.WriteFinish(ext, duration)
 			}
 		}
 		switch action {
@@ -451,13 +451,7 @@ func stdloopAccept(s *stdserver, l *stdloop, c *stdconn) error {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
 			}
-			start := time.Now()
 			c.conn.Write(out)
-			end := time.Now()
-			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
-			if s.events.WriteFinish != nil {
-				s.events.WriteFinish(duration)
-			}
 		}
 		if opts.TCPKeepAlive > 0 {
 			if c, ok := c.conn.(*net.TCPConn); ok {

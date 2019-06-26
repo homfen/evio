@@ -34,6 +34,7 @@ type conn struct {
 	localAddr  net.Addr         // local addre
 	remoteAddr net.Addr         // remote addr
 	loop       *loop            // connected loop
+	ext        interface{}
 }
 
 func (c *conn) Context() interface{}       { return c.ctx }
@@ -291,7 +292,7 @@ func loopAccept(s *server, l *loop, fd int) error {
 			if err := syscall.SetNonblock(nfd, true); err != nil {
 				return err
 			}
-			c := &conn{fd: nfd, sa: sa, lnidx: i, loop: l}
+			c := &conn{fd: nfd, sa: sa, lnidx: i, loop: l, ext: nil}
 			l.fdconns[c.fd] = c
 			l.poll.AddReadWrite(c.fd)
 			atomic.AddInt32(&l.count, 1)
@@ -327,7 +328,7 @@ func loopUDPRead(s *server, l *loop, lnidx, fd int) error {
 		c.localAddr = s.lns[lnidx].lnaddr
 		c.remoteAddr = internal.SockaddrToAddr(&sa6)
 		in := append([]byte{}, l.packet[:n]...)
-		out, action := s.events.Data(c, in)
+		out, action, ext := s.events.Data(c, in)
 		if len(out) > 0 {
 			if s.events.PreWrite != nil {
 				s.events.PreWrite()
@@ -338,7 +339,7 @@ func loopUDPRead(s *server, l *loop, lnidx, fd int) error {
 			end := time.Now()
 			duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
 			if s.events.WriteFinish != nil {
-				s.events.WriteFinish(duration)
+				s.events.WriteFinish(ext, duration)
 			}
 		}
 		switch action {
@@ -383,7 +384,7 @@ func loopWrite(s *server, l *loop, c *conn) error {
 	end := time.Now()
 	duration := math.Round(end.Sub(start).Seconds()*1000000) / 1000
 	if s.events.WriteFinish != nil {
-		s.events.WriteFinish(duration)
+		s.events.WriteFinish(c.ext, duration)
 	}
 
 	if err != nil {
@@ -424,8 +425,9 @@ func loopWake(s *server, l *loop, c *conn) error {
 	if s.events.Data == nil {
 		return nil
 	}
-	out, action := s.events.Data(c, nil)
+	out, action, ext := s.events.Data(c, nil)
 	c.action = action
+	c.ext = ext
 	if len(out) > 0 {
 		c.out = append([]byte{}, out...)
 	}
@@ -449,8 +451,9 @@ func loopRead(s *server, l *loop, c *conn) error {
 		in = append([]byte{}, in...)
 	}
 	if s.events.Data != nil {
-		out, action := s.events.Data(c, in)
+		out, action, ext := s.events.Data(c, in)
 		c.action = action
+		c.ext = ext
 		if len(out) > 0 {
 			c.out = append([]byte{}, out...)
 		}

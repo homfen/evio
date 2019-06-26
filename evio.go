@@ -120,7 +120,7 @@ type Events struct {
 	// Data fires when a connection sends the server data.
 	// The in parameter is the incoming data.
 	// Use the out return value to write data to the connection.
-	Data func(c Conn, in []byte) (out []byte, action Action)
+	Data func(c Conn, in []byte) (out []byte, action Action, ext interface{})
 	// Tick fires immediately after the server starts and will fire again
 	// following the duration specified by the delay return value.
 	Tick func() (delay time.Duration, action Action)
